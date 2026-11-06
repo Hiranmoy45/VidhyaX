@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:cf": "opennextjs-cloudflare build",
+    "cf-build": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "eslint"
   },
