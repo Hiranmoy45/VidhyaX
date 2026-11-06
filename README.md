@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PW Learning Hub (PRO MAX)
 
-## Getting Started
+Physics Wallah (PW), CSIR-NET এবং অন্যান্য প্রতিযোগিতামূলক পরীক্ষার জন্য তৈরি একটি সম্পূর্ণ প্রফেশনাল **All-in-One Learning Management Platform (LMS)**।
 
-First, run the development server:
+এটি তৈরি করা হয়েছে **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, **Lucide Icons** এবং **UI/UX Pro Max Skill**-এর আন্তর্জাতিক ডিজাইন গাইডলাইন মেনে।
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🌟 প্রধান মডিউল ও সুবিধাসমূহ (Key Features)
+
+### ১. 🎓 Course Explorer & Search (কোর্স সার্চ ও ব্রাউজ)
+- যেকোনো কোর্সের নাম, ব্যাচ আইডি বা লিংক দিয়ে এক ক্লিকে পুরো সিলেবাস লোড করা যায়।
+- বিষয়ভিত্তিক ফিল্টার (যেমন: *Mathematical Sciences, Notices* ইত্যাদি)।
+- প্রতিটি চ্যাপ্টারে মোট কয়টি ভিডিও এবং কয়টি নোট আছে তা স্পষ্টভাবে প্রদর্শন করে।
+
+### ২. 🎥 In-App HD Video Studio (ভিডিও দেখা ও ডাউনলোড)
+- কোনো ভিডিও নামানোর আগেই সরাসরি ব্রাউজারে ফুল HD তে প্লে করা যায়।
+- স্পিড কন্ট্রোল: `0.75x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`।
+- থিয়েটার মোড ও ফুলস্ক্রিন ভিউ।
+- ডানপাশে প্লেলিস্ট ড্রয়ার দিয়ে খুব সহজে এক লেকচার থেকে অন্য লেকচারে জাম্প করা যায়।
+- ১-ক্লিকে লসলেস 720p MP4 ডাউনলোড বাটন।
+
+### ৩. 📄 In-App PDF Document Reader (ক্লাসনোটস ও স্লাইডস রিডার)
+- ক্লাসনোটস এবং লেকচার স্লাইডস ডাউনলোড না করেই ব্রাউজারের ফুলস্ক্রিন রিডারে পড়া যায়।
+- অরিজিনাল হ্যান্ডরিটেন স্লাইড জুম ইন/আউট করার সুবিধা।
+- যেকোনো সময় ১-ক্লিকে লোকাল ড্রাইভে সেভ করার ব্যবস্থা।
+
+### ৪. 📝 CBT Mock Exam Portal (অনলাইন টেস্ট ও কুইজ)
+- NTA এবং CSIR NET-এর অফিশিয়াল প্যাটার্ন অনুযায়ী তৈরি আসল **Computer-Based Test (CBT)** ইন্টারফেস।
+- কাউন্টডাউন টাইমার (যেমন: ৪৫ বা ৬০ মিনিট)।
+- কালার কোডেড প্রশ্ন প্যালেট:
+  - 🟢 Answered (উত্তর দেওয়া হয়েছে)
+  - 🔴 Not Answered (উত্তর দেওয়া হয়নি)
+  - 🟣 Marked for Review (পুনর্বিবেচনার জন্য চিহ্নিত)
+  - ⚪ Not Visited (দেখা হয়নি)
+- তাৎক্ষণিক রেজাল্ট ও স্কোরকার্ড:
+  - মোট নম্বর ও অ্যাকুরেসি পার্সেন্টেজ।
+  - প্রতিটি প্রশ্নের সঠিক উত্তর এবং বিস্তারিত **Step-by-Step ব্যাখ্যা ও সমাধান**।
+
+### ৫. 📖 Study Notes & Books (হ্যান্ডবুক ও ফর্মুলা শিট)
+- কমপ্লিট লেকচার হ্যান্ডবুক এবং রিভিশন ফর্মুলা শিট এক ক্লিকে অ্যাক্সেস।
+
+---
+
+## 🚀 কীভাবে চালু করবেন (মাত্র ১-ক্লিক)
+
+`F:\` ড্রাইভে সরাসরি তৈরি করা আছে:
+👉 **`F:\PW_LEARNING_HUB.bat`** (অথবা `F:\pw-course-platform\START_PLATFORM.bat`)
+
+১. ফাইলে ডাবল-ক্লিক করলেই লোকাল সার্ভার চালু হয়ে যাবে।
+২. আপনার ব্রাউজারে প্ল্যাটফর্মটি ওপেন হবে:
+```
+http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ টেকনিক্যাল আর্কিটেকচার (Tech Stack)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Framework**: Next.js 16 (App Router with Turbopack)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS v4
+- **Icons**: Lucide React
+- **Design Standard**: UI/UX Pro Max Design Guidelines (Accessible contrast, dark slate theme, fluid transitions, visible focus states)
+- **Backend APIs**:
+  - `/api/batch` - ব্যাচ মেটাডেটা লোডার
+  - `/api/topics` - চ্যাপ্টার ও টপিক লিস্ট
+  - `/api/contents` - ভিডিও ও ক্লাসনোটস ডেটা
+  - `/api/tests` - সিবিটি মক টেস্ট ও প্রশ্নব্যাংক
+  - `/api/download` - ব্যাকগ্রাউন্ড ডাউনলোডার সার্ভিস
