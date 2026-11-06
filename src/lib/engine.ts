@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import puppeteer, { Browser } from 'puppeteer-core';
+import type { Browser } from 'puppeteer-core';
 
 export const CONFIG = {
     chromePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -319,6 +319,7 @@ export async function downloadPdfFile(item: any, outputDir: string, onProgress?:
 }
 
 export async function launchBrowser(): Promise<Browser> {
+    const puppeteer = (await import('puppeteer-core')).default;
     const chrome = getChromePath();
     return await puppeteer.launch({
         executablePath: chrome,
