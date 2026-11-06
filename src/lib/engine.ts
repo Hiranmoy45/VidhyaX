@@ -14,11 +14,11 @@ export const CONFIG = {
 
 // Resolve Chrome path lazily
 export function getChromePath(): string {
-    if (fs.existsSync(CONFIG.chromePath)) return CONFIG.chromePath;
+    if (fs.existsSync(/*turbopackIgnore: true*/ CONFIG.chromePath)) return CONFIG.chromePath;
     const alt1 = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
     const alt2 = path.join(process.env.LOCALAPPDATA || "", "Google\\Chrome\\Application\\chrome.exe");
-    if (fs.existsSync(alt1)) return alt1;
-    if (fs.existsSync(alt2)) return alt2;
+    if (fs.existsSync(/*turbopackIgnore: true*/ alt1)) return alt1;
+    if (fs.existsSync(/*turbopackIgnore: true*/ alt2)) return alt2;
     return CONFIG.chromePath;
 }
 
@@ -425,7 +425,7 @@ export async function downloadVideo(
     const { baseCdn, segments } = await getPlaylist(browser, lecture);
     if (!segments.length) throw new Error('No video segments found in playlist');
 
-    if (!fs.existsSync(CONFIG.scratchDir)) fs.mkdirSync(CONFIG.scratchDir, { recursive: true });
+    if (!fs.existsSync(/*turbopackIgnore: true*/ CONFIG.scratchDir)) fs.mkdirSync(/*turbopackIgnore: true*/ CONFIG.scratchDir, { recursive: true });
     const tempTs = path.join(CONFIG.scratchDir, `temp_${Date.now()}_${Math.random().toString(36).substring(7)}.ts`);
     const writeStream = fs.createWriteStream(tempTs);
 
@@ -483,16 +483,16 @@ export async function downloadVideo(
 
     if (onProgress) onProgress({ status: 'remuxing', message: 'Losslessly remuxing to MP4 with FFmpeg...', percent: 98 });
 
-    const result = spawnSync(CONFIG.ffmpegPath, ['-i', tempTs, '-c', 'copy', finalMp4, '-y'], { stdio: 'pipe' });
+    const result = spawnSync(/*turbopackIgnore: true*/ CONFIG.ffmpegPath, ['-i', tempTs, '-c', 'copy', finalMp4, '-y'], { stdio: 'pipe' });
     if (result.status !== 0) {
         throw new Error(`FFmpeg error: ${result.stderr?.toString().slice(-400) || 'Unknown error'}`);
     }
 
-    if (fs.existsSync(tempTs)) {
-        try { fs.unlinkSync(tempTs); } catch (e) {}
+    if (fs.existsSync(/*turbopackIgnore: true*/ tempTs)) {
+        try { fs.unlinkSync(/*turbopackIgnore: true*/ tempTs); } catch (e) {}
     }
 
-    const finalSizeMb = (fs.statSync(finalMp4).size / (1024 * 1024)).toFixed(1);
+    const finalSizeMb = (fs.statSync(/*turbopackIgnore: true*/ finalMp4).size / (1024 * 1024)).toFixed(1);
     if (onProgress) onProgress({ status: 'done', message: `Saved successfully (${finalSizeMb} MB)`, percent: 100, finalPath: finalMp4, sizeMb: finalSizeMb });
 
     return { finalPath: finalMp4, sizeMb: finalSizeMb, skipped: false };

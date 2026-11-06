@@ -5,6 +5,10 @@ import { sanitizeFilename, CONFIG } from '@/lib/engine';
 
 export async function GET(req: NextRequest) {
     try {
+        if (process.env.VERCEL) {
+            return NextResponse.json({ exists: false });
+        }
+
         const { searchParams } = new URL(req.url);
         const title = searchParams.get('title') || '';
         const chapter = searchParams.get('chapter') || '';
@@ -27,15 +31,15 @@ export async function GET(req: NextRequest) {
         const prefix = prefixMatch ? prefixMatch[1].trim() : '';
 
         for (const dir of candidateDirs) {
-            if (fs.existsSync(dir)) {
-                const files = fs.readdirSync(dir);
+            if (fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+                const files = fs.readdirSync(/*turbopackIgnore: true*/ dir);
                 for (const f of files) {
                     if (!f.endsWith('.mp4')) continue;
                     const fLower = f.toLowerCase();
                     // Match clean title or prefix
                     if (fLower.includes(cleanTitle) || (prefix && fLower.includes(prefix))) {
                         const fullPath = path.join(dir, f);
-                        const stat = fs.statSync(fullPath);
+                        const stat = fs.statSync(/*turbopackIgnore: true*/ fullPath);
                         if (stat.size > 5 * 1024 * 1024) {
                             return NextResponse.json({
                                 exists: true,

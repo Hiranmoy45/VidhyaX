@@ -6,11 +6,11 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const filePath = searchParams.get('path');
 
-        if (!filePath || !fs.existsSync(filePath)) {
+        if (!filePath || !fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
             return new NextResponse('File not found', { status: 404 });
         }
 
-        const stat = fs.statSync(filePath);
+        const stat = fs.statSync(/*turbopackIgnore: true*/ filePath);
         const fileSize = stat.size;
         const range = req.headers.get('range');
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
             const start = parseInt(parts[0], 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunkSize = (end - start) + 1;
-            const fileStream = fs.createReadStream(filePath, { start, end });
+            const fileStream = fs.createReadStream(/*turbopackIgnore: true*/ filePath, { start, end });
 
             const stream = new ReadableStream({
                 start(controller) {
