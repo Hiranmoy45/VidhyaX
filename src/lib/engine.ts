@@ -102,7 +102,7 @@ export async function fetchBatchDetails(batchId: string) {
         const url = `https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v3/batches/${batchId}/details`;
         const res = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'User-Agent': 'VidhyaX/1.0 (Educational Platform; Node.js)',
                 'Referer': 'https://pwthor.live/',
                 'Origin': 'https://pwthor.live',
                 'Accept': 'application/json, text/plain, */*'
@@ -157,7 +157,7 @@ export async function fetchTopics(batchId = CONFIG.defaultBatchId, subjectSlug =
         const url = `https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v2/batches/${batchId}/subject/${subjectSlug}/topics`;
         const res = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'User-Agent': 'VidhyaX/1.0 (Educational Platform; Node.js)',
                 'Referer': 'https://pwthor.live/',
                 'Origin': 'https://pwthor.live',
                 'Accept': 'application/json, text/plain, */*'
@@ -196,7 +196,7 @@ export async function fetchChapterContents(batchId = CONFIG.defaultBatchId, subj
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const commonHeaders = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'User-Agent': 'VidhyaX/1.0 (Educational Platform; Node.js)',
             'Referer': 'https://pwthor.live/',
             'Origin': 'https://pwthor.live',
             'Accept': 'application/json, text/plain, */*'
@@ -347,7 +347,7 @@ export async function fetchBatchTests(testCatId = '69c2639ebcad7cea7fdd0c08') {
     const url = `https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v1/test-category/${testCatId}/tests`;
     const res = await fetch(url, {
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'User-Agent': 'VidhyaX/1.0 (Educational Platform; Node.js)',
             'Referer': 'https://pwthor.live/',
             'Origin': 'https://pwthor.live'
         }
@@ -361,7 +361,7 @@ export async function resolveNotePdfUrl(batchId: string, subjectSlug: string, sc
     const url = `https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v1/batches/${batchId}/subject/${subjectSlug}/schedule/${scheduleId}/schedule-details`;
     const res = await fetch(url, {
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'User-Agent': 'VidhyaX/1.0 (Educational Platform; Node.js)',
             'Referer': 'https://pwthor.live/',
             'Origin': 'https://pwthor.live'
         }
