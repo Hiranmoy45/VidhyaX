@@ -50,6 +50,10 @@ import {
     Moon
 } from 'lucide-react';
 
+function sanitizeFilename(name: string): string {
+    return (name || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+}
+
 export default function Home() {
     // Navigation tab
     const [activeTab, setActiveTab] = useState<SidebarTab>('batches');
@@ -76,22 +80,12 @@ export default function Home() {
     const [historyBatches, setHistoryBatches] = useState<BatchData[]>([]);
 
     // Enrolled Batches State (Persisted in localStorage)
-    const [enrolledBatches, setEnrolledBatches] = useState<any[]>([
-        {
-            batch_id: '69c13cdeb958f08c1d1dad1e',
-            name: 'Shodh Foundation Dec 2026 Mathematical Sciences',
-            exam: 'CSIR-NET',
-            language: 'Hinglish',
-            byName: 'Pure & Applied Mathematics, COV, Linear Algebra, Real Analysis',
-            photo: 'https://static.pw.live/5eb393ee95fab7468a79d189/ADMIN/bafda9b4-e53a-4801-a27b-c0c03484b0ee.png',
-            amount: 4999
-        }
-    ]);
+    const [enrolledBatches, setEnrolledBatches] = useState<any[]>([]);
 
     // Active Course / LMS state
-    const [batchInput, setBatchInput] = useState<string>('69c13cdeb958f08c1d1dad1e');
+    const [batchInput, setBatchInput] = useState<string>('');
     const [currentBatch, setCurrentBatch] = useState<any>(null);
-    const [activeSubjectSlug, setActiveSubjectSlug] = useState<string>('mathematical-sciences-779105');
+    const [activeSubjectSlug, setActiveSubjectSlug] = useState<string>('');
     const [allTopics, setAllTopics] = useState<any[]>([]);
     const [topicSearch, setTopicSearch] = useState<string>('');
     const [activeTopic, setActiveTopic] = useState<any>(null);
@@ -103,7 +97,7 @@ export default function Home() {
     const [contentSubTab, setContentSubTab] = useState<'videos' | 'notes' | 'exercises'>('videos');
 
     // Destination Folder State
-    const [targetFolder, setTargetFolder] = useState<string>("F:\\PW\\Shodh Foundation Dec 2026 Mathematical Sciences");
+    const [targetFolder, setTargetFolder] = useState<string>("F:\\PW");
     const [isEditingFolder, setIsEditingFolder] = useState<boolean>(false);
 
     // Tests state
@@ -199,9 +193,11 @@ export default function Home() {
             console.error('Failed to parse saved state:', e);
         }
 
-        // Preload default course
-        loadCourse('69c13cdeb958f08c1d1dad1e');
-        loadTests('69c2639ebcad7cea7fdd0c08');
+        // If user previously opened a course, reload that course:
+        const lastActiveBatch = localStorage.getItem('pw_active_batch_id');
+        if (lastActiveBatch) {
+            loadCourse(lastActiveBatch);
+        }
     }, []);
 
     // 3. Fetch Catalog Batches with Debounce
@@ -280,6 +276,9 @@ export default function Home() {
     const handleSelectBatch = (batch: BatchData) => {
         recordHistory(batch);
         setBatchInput(batch.batch_id);
+        try {
+            localStorage.setItem('pw_active_batch_id', batch.batch_id);
+        } catch { }
         loadCourse(batch.batch_id);
         setActiveTab('curriculum');
     };
@@ -301,23 +300,91 @@ export default function Home() {
 
     // Course loader
     const loadCourse = async (inputStr: string) => {
+        if (!inputStr || !inputStr.trim()) return;
         setIsLoadingCourse(true);
         try {
-            const res = await fetch(`/api/batch?input=${encodeURIComponent(inputStr)}`);
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error);
+            let batchInfo: any = null;
 
-            setCurrentBatch(data.batchInfo);
-            if (data.batchInfo.testCats?.[0]) {
-                loadTests(data.batchInfo.testCats[0]);
+            // 1. Try server API
+            try {
+                const res = await fetch(`/api/batch?input=${encodeURIComponent(inputStr)}`);
+                const data = await res.json();
+                if (data.success && data.batchInfo && data.batchInfo.name && data.batchInfo.subjects?.length) {
+                    batchInfo = data.batchInfo;
+                }
+            } catch (err) {
+                console.warn('Server API batch fetch failed, trying client direct fetch:', err);
             }
-            if (data.batchInfo.subjects?.length) {
-                const preferred = data.batchInfo.subjects.find((s: any) => s.slug.includes('math')) || data.batchInfo.subjects[0];
-                setActiveSubjectSlug(preferred.slug);
-                await loadTopics(data.batchInfo.batchId, preferred.slug);
+
+            // 2. Client direct fetch fallback if server failed (Vercel IP block)
+            if (!batchInfo || !batchInfo.subjects?.length) {
+                const bId = inputStr.trim().match(/([0-9a-fA-F]{24})/)?.[1] || inputStr.trim();
+                try {
+                    const directRes = await fetch(`https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v3/batches/${bId}/details`, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Referer': 'https://pwthor.live/',
+                            'Origin': 'https://pwthor.live'
+                        }
+                    });
+                    if (directRes.ok) {
+                        const directData = await directRes.json();
+                        const b = directData.data || {};
+                        if (b.name) {
+                            batchInfo = {
+                                batchId: b._id || bId,
+                                name: b.name,
+                                previewImage: b.previewImage?.baseUrl && b.previewImage?.key ? `${b.previewImage.baseUrl}${b.previewImage.key}` : '',
+                                testCats: b.testCats || [],
+                                subjects: (b.subjects || []).map((s: any) => ({
+                                    _id: s._id,
+                                    slug: s.slug,
+                                    subject: s.subject
+                                }))
+                            };
+                        }
+                    }
+                } catch (clientErr) {
+                    console.warn('Direct client batch fetch failed:', clientErr);
+                }
+            }
+
+            // 3. Fallback ONLY if the batch is Shodh Foundation:
+            if (!batchInfo && inputStr.includes('69c13cdeb958f08c1d1dad1e')) {
+                batchInfo = {
+                    batchId: '69c13cdeb958f08c1d1dad1e',
+                    name: "Shodh Foundation Dec 2026 Mathematical Sciences",
+                    previewImage: "https://static.pw.live/5eb393ee95fab7468a79d189/ADMIN/bafda9b4-e53a-4801-a27b-c0c03484b0ee.png",
+                    testCats: ['69c2639ebcad7cea7fdd0c08'],
+                    subjects: [{ _id: "69c26584eb74f4d5c88757aa", slug: "mathematical-sciences-779105", subject: "Mathematical Sciences" }]
+                };
+            }
+
+            if (!batchInfo) {
+                throw new Error('Course details could not be loaded. Please check the Batch ID.');
+            }
+
+            setCurrentBatch(batchInfo);
+            setBatchInput(batchInfo.batchId);
+            setTargetFolder(`F:\\PW\\${sanitizeFilename(batchInfo.name)}`);
+            try {
+                localStorage.setItem('pw_active_batch_id', batchInfo.batchId);
+            } catch {}
+
+            if (batchInfo.testCats?.[0]) {
+                loadTests(batchInfo.testCats[0]);
+            }
+            if (batchInfo.subjects?.length) {
+                const firstSub = batchInfo.subjects[0];
+                setActiveSubjectSlug(firstSub.slug);
+                await loadTopics(batchInfo.batchId, firstSub.slug);
+            } else {
+                setAllTopics([]);
+                setChapterContents({ videos: [], notes: [], exercises: [] });
             }
         } catch (e: any) {
             console.error('Course load failed:', e);
+            alert(`Could not load course: ${e.message}`);
         } finally {
             setIsLoadingCourse(false);
         }
@@ -325,21 +392,53 @@ export default function Home() {
 
     const loadTopics = async (batchId: string, subjectSlug: string) => {
         try {
-            const res = await fetch(`/api/topics?batchId=${batchId}&subjectSlug=${subjectSlug}`);
-            const data = await res.json();
-            if (data.success && data.topics?.length) {
-                setAllTopics(data.topics || []);
-                selectChapter(data.topics[0], batchId, subjectSlug);
-                return;
+            let topics: any[] = [];
+
+            // 1. Try server API
+            try {
+                const res = await fetch(`/api/topics?batchId=${batchId}&subjectSlug=${subjectSlug}`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.topics) && data.topics.length > 0) {
+                    topics = data.topics;
+                }
+            } catch (err) {
+                console.warn('Server API topics fetch error:', err);
+            }
+
+            // 2. Client direct fetch fallback if server failed (Vercel IP block)
+            if (!topics.length) {
+                try {
+                    const directRes = await fetch(`https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v2/batches/${batchId}/subject/${subjectSlug}/topics`, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Referer': 'https://pwthor.live/',
+                            'Origin': 'https://pwthor.live'
+                        }
+                    });
+                    if (directRes.ok) {
+                        const directData = await directRes.json();
+                        topics = (directData.data || []).filter((t: any) => (t.videos > 0 || t.notes > 0));
+                    }
+                } catch (clientErr) {
+                    console.warn('Client direct topics fetch error:', clientErr);
+                }
+            }
+
+            // 3. Fallback ONLY if the batch is Shodh Foundation:
+            if (!topics.length && batchId === '69c13cdeb958f08c1d1dad1e') {
+                topics = (curriculumFallback.topics || []).filter((t: any) => (t.videos > 0 || t.notes > 0));
+            }
+
+            setAllTopics(topics);
+            if (topics.length > 0) {
+                selectChapter(topics[0], batchId, subjectSlug);
+            } else {
+                setActiveTopic(null);
+                setChapterContents({ videos: [], notes: [], exercises: [] });
             }
         } catch (e) {
-            console.error('API topics fetch error:', e);
-        }
-
-        // Direct resilient fallback (guarantees curriculum renders on Vercel)
-        if (curriculumFallback.topics?.length) {
-            setAllTopics(curriculumFallback.topics as any);
-            selectChapter(curriculumFallback.topics[0], batchId, subjectSlug);
+            console.error('Failed to load topics:', e);
+            setAllTopics([]);
         }
     };
 
@@ -359,36 +458,120 @@ export default function Home() {
     };
 
     const selectChapter = async (topic: any, bId?: string, sSlug?: string) => {
+        if (!topic) return;
         setActiveTopic(topic);
         setIsLoadingContents(true);
-        const batch = bId || currentBatch?.batchId || '69c13cdeb958f08c1d1dad1e';
+        const batch = bId || currentBatch?.batchId;
         const sub = sSlug || activeSubjectSlug;
 
         try {
-            const res = await fetch(`/api/contents?batchId=${batch}&subjectSlug=${sub}&topicSlug=${topic.slug}`);
-            const data = await res.json();
-            if (data.success && (data.videos?.length || data.notes?.length)) {
-                const vids = data.videos || [];
-                const nts = data.notes || [];
-                const exs = data.exercises || [];
-                setChapterContents({ videos: vids, notes: nts, exercises: exs });
-                setSelectedVideoIds(new Set(vids.map((v: any) => v.id)));
-                setSelectedNoteIds(new Set(nts.map((n: any) => n.id)));
-                return;
-            }
-        } catch (e) {
-            console.error('API contents fetch error:', e);
-        }
+            let contents: { videos: any[]; notes: any[]; exercises: any[] } | null = null;
 
-        // Direct resilient fallback (guarantees chapter contents render on Vercel)
-        const fb = (curriculumFallback.contentsMap as any)?.[topic.slug];
-        if (fb) {
-            const vids = fb.videos || [];
-            const nts = fb.notes || [];
-            const exs = fb.exercises || [];
-            setChapterContents({ videos: vids, notes: nts, exercises: exs });
-            setSelectedVideoIds(new Set(vids.map((v: any) => v.id)));
-            setSelectedNoteIds(new Set(nts.map((n: any) => n.id)));
+            // 1. Try server API
+            try {
+                const res = await fetch(`/api/contents?batchId=${batch}&subjectSlug=${sub}&topicSlug=${topic.slug}`);
+                const data = await res.json();
+                if (data.success && (data.videos?.length || data.notes?.length || data.exercises?.length)) {
+                    contents = {
+                        videos: data.videos || [],
+                        notes: data.notes || [],
+                        exercises: data.exercises || []
+                    };
+                }
+            } catch (err) {
+                console.warn('Server API contents fetch error:', err);
+            }
+
+            // 2. Client direct fetch fallback if server failed (Vercel IP block)
+            if (!contents || (!contents.videos.length && !contents.notes.length)) {
+                try {
+                    const vRes = await fetch(`https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v2/batches/${batch}/subject/${sub}/contents?tag=${topic.slug}&contentType=videos&page=1`, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Referer': 'https://pwthor.live/',
+                            'Origin': 'https://pwthor.live'
+                        }
+                    });
+                    const rawVideos = vRes.ok ? ((await vRes.json()).data || []) : [];
+
+                    const nRes = await fetch(`https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v2/batches/${batch}/subject/${sub}/contents?tag=${topic.slug}&contentType=notes&page=1`, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Referer': 'https://pwthor.live/',
+                            'Origin': 'https://pwthor.live'
+                        }
+                    });
+                    const rawNotes = nRes.ok ? ((await nRes.json()).data || []) : [];
+
+                    const mappedVideos = rawVideos.map((item: any, idx: number) => {
+                        const title = item.topic || item.videoDetails?.name || `Lecture ${idx + 1}`;
+                        return {
+                            id: item._id,
+                            index: idx + 1,
+                            type: 'video' as const,
+                            title,
+                            cleanTitle: sanitizeFilename(title),
+                            videoId: item._id,
+                            videoKey: item.videoDetails?._id || item.videoDetails?.id || item.url || '',
+                            duration: item.videoDetails?.duration || '',
+                            poster: item.videoDetails?.image || '',
+                            batchId: batch,
+                            subjectSlug: sub,
+                            topicSlug: topic.slug
+                        };
+                    });
+
+                    const mappedNotes: any[] = [];
+                    for (let idx = 0; idx < rawNotes.length; idx++) {
+                        const item = rawNotes[idx];
+                        const hwList = item.homeworkIds || [];
+                        for (const hw of hwList) {
+                            const att = hw.attachmentIds?.[0];
+                            const title = hw.topic || hw.note || `Notes ${idx + 1}`;
+                            mappedNotes.push({
+                                id: hw._id || item._id,
+                                scheduleId: item._id,
+                                index: mappedNotes.length + 1,
+                                type: 'note' as const,
+                                title,
+                                cleanTitle: sanitizeFilename(title),
+                                pdfUrl: att?.baseUrl && att?.key ? `${att.baseUrl}${att.key}` : null,
+                                batchId: batch,
+                                subjectSlug: sub,
+                                topicSlug: topic.slug
+                            });
+                        }
+                    }
+
+                    if (mappedVideos.length || mappedNotes.length) {
+                        contents = { videos: mappedVideos, notes: mappedNotes, exercises: [] };
+                    }
+                } catch (clientErr) {
+                    console.warn('Client direct contents fetch error:', clientErr);
+                }
+            }
+
+            // 3. Fallback ONLY if the batch is Shodh Foundation:
+            if ((!contents || (!contents.videos.length && !contents.notes.length)) && batch === '69c13cdeb958f08c1d1dad1e') {
+                const fb = (curriculumFallback.contentsMap as any)?.[topic.slug];
+                if (fb) {
+                    contents = {
+                        videos: fb.videos || [],
+                        notes: fb.notes || [],
+                        exercises: fb.exercises || []
+                    };
+                }
+            }
+
+            const finalContents = contents || { videos: [], notes: [], exercises: [] };
+            setChapterContents(finalContents);
+            setSelectedVideoIds(new Set(finalContents.videos.map((v: any) => v.id)));
+            setSelectedNoteIds(new Set(finalContents.notes.map((n: any) => n.id)));
+        } catch (e) {
+            console.error('Failed to load chapter contents:', e);
+            setChapterContents({ videos: [], notes: [], exercises: [] });
+        } finally {
+            setIsLoadingContents(false);
         }
     };
 
@@ -834,30 +1017,51 @@ export default function Home() {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {enrolledBatches.map((batch) => {
-                                    const bData: BatchData = {
-                                        batch_id: batch.batch_id || batch.id,
-                                        name: batch.name,
-                                        language: batch.language || 'Hinglish',
-                                        exam: batch.exam || batch.category || 'CSIR-NET',
-                                        byName: batch.byName || batch.description,
-                                        photo: batch.photo || batch.previewImage,
-                                        amount: batch.amount
-                                    };
+                            {enrolledBatches.length === 0 ? (
+                                <div className="text-center py-20 bg-white dark:bg-slate-900/60 border border-stone-200/90 dark:border-slate-800 rounded-3xl space-y-4 px-4 shadow-xs">
+                                    <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 mx-auto flex items-center justify-center">
+                                        <BookOpen className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+                                        No Enrolled Courses Yet
+                                    </h3>
+                                    <p className="text-xs text-stone-500 dark:text-slate-400 max-w-md mx-auto">
+                                        Your enrolled courses list is empty. Browse from 18,000+ Physics Wallah batches and click &apos;Enroll Now&apos; on any course to pin it to your personal dashboard.
+                                    </p>
+                                    <button
+                                        onClick={() => setActiveTab('batches')}
+                                        className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-amber-600/25 transition inline-flex items-center space-x-2"
+                                    >
+                                        <Compass className="w-4 h-4" />
+                                        <span>Explore 18k+ Batches</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {enrolledBatches.map((batch) => {
+                                        const bData: BatchData = {
+                                            batch_id: batch.batch_id || batch.id,
+                                            name: batch.name,
+                                            language: batch.language || 'Hinglish',
+                                            exam: batch.exam || batch.category || 'CSIR-NET',
+                                            byName: batch.byName || batch.description,
+                                            photo: batch.photo || batch.previewImage,
+                                            amount: batch.amount
+                                        };
 
-                                    return (
-                                        <BatchCard
-                                            key={bData.batch_id}
-                                            batch={bData}
-                                            isFavorite={favoriteBatchIds.has(bData.batch_id)}
-                                            isEnrolled={true}
-                                            onToggleFavorite={handleToggleFavorite}
-                                            onSelectBatch={handleSelectBatch}
-                                        />
-                                    );
-                                })}
-                            </div>
+                                        return (
+                                            <BatchCard
+                                                key={bData.batch_id}
+                                                batch={bData}
+                                                isFavorite={favoriteBatchIds.has(bData.batch_id)}
+                                                isEnrolled={true}
+                                                onToggleFavorite={handleToggleFavorite}
+                                                onSelectBatch={handleSelectBatch}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -896,6 +1100,26 @@ export default function Home() {
 
                     {/* SECTION: ACTIVE CURRICULUM (LECTURES, NOTES & DPPS) */}
                     {activeTab === 'curriculum' && (
+                        !currentBatch && !isLoadingCourse ? (
+                            <div className="text-center py-24 bg-white dark:bg-slate-900/60 border border-stone-200/90 dark:border-slate-800 rounded-3xl space-y-4 px-4 shadow-xs">
+                                <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 mx-auto flex items-center justify-center">
+                                    <BookOpen className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+                                    No Course Selected
+                                </h3>
+                                <p className="text-xs text-stone-500 dark:text-slate-400 max-w-md mx-auto">
+                                    Please select any course from the Batches catalog or paste a Physics Wallah course link or Batch ID in the search bar above to explore its curriculum, video lectures, notes, and DPPs.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('batches')}
+                                    className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl text-xs font-bold shadow-md shadow-amber-600/25 transition inline-flex items-center space-x-2"
+                                >
+                                    <Compass className="w-4 h-4" />
+                                    <span>Browse Batches Catalog</span>
+                                </button>
+                            </div>
+                        ) : (
                         <div className="space-y-6">
 
                             {/* Course Header Banner */}
@@ -1506,6 +1730,7 @@ export default function Home() {
                                 </div>
                             </div>
                         </div>
+                        )
                     )}
 
                     {/* SECTION: CBT TESTS */}
@@ -1517,7 +1742,7 @@ export default function Home() {
                                         CBT Examination Portal
                                     </span>
                                     <h2 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-white mt-2">
-                                        {currentBatch?.name} — All Practice & Mock Tests
+                                        {currentBatch?.name || 'PW Course'} — All Practice & Mock Tests
                                     </h2>
                                     <p className="text-xs text-stone-500 dark:text-slate-400 mt-1">
                                         Timed test simulation with question palette, negative marking, and instant solutions.

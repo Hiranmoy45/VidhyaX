@@ -95,15 +95,26 @@ export async function fetchBatchDetails(batchId: string) {
             };
         }
     } catch (err) {
-        console.warn('Upstream batch fetch failed, using fallback:', err);
+        console.warn('Upstream batch fetch failed:', err);
+    }
+
+    // Only fallback to Shodh Foundation if the requested batch is Shodh Foundation
+    if (batchId === '69c13cdeb958f08c1d1dad1e') {
+        return {
+            batchId: '69c13cdeb958f08c1d1dad1e',
+            name: "Shodh Foundation Dec 2026 Mathematical Sciences",
+            previewImage: "https://static.pw.live/5eb393ee95fab7468a79d189/ADMIN/bafda9b4-e53a-4801-a27b-c0c03484b0ee.png",
+            testCats: ['69c2639ebcad7cea7fdd0c08'],
+            subjects: [{ _id: "69c26584eb74f4d5c88757aa", slug: "mathematical-sciences-779105", subject: "Mathematical Sciences" }]
+        };
     }
 
     return {
-        batchId: '69c13cdeb958f08c1d1dad1e',
-        name: "Shodh Foundation Dec 2026 Mathematical Sciences",
-        previewImage: "https://static.pw.live/5eb393ee95fab7468a79d189/ADMIN/bafda9b4-e53a-4801-a27b-c0c03484b0ee.png",
-        testCats: ['69c2639ebcad7cea7fdd0c08'],
-        subjects: [{ _id: "69c26584eb74f4d5c88757aa", slug: "mathematical-sciences-779105", subject: "Mathematical Sciences" }]
+        batchId,
+        name: `PW Batch ${batchId}`,
+        previewImage: '',
+        testCats: [],
+        subjects: []
     };
 }
 
@@ -128,12 +139,15 @@ export async function fetchTopics(batchId = CONFIG.defaultBatchId, subjectSlug =
             if (topics.length > 0) return topics;
         }
     } catch (err) {
-        console.warn('Upstream topics fetch failed, using fallback dataset:', err);
+        console.warn('Upstream topics fetch failed:', err);
     }
 
-    // High-fidelity fallback for curriculum
-    const fallbackTopics = (curriculumFallback.topics || []).filter((t: any) => (t.videos > 0 || t.notes > 0));
-    return fallbackTopics;
+    // Only fallback if the requested batch is Shodh Foundation
+    if (batchId === '69c13cdeb958f08c1d1dad1e') {
+        return (curriculumFallback.topics || []).filter((t: any) => (t.videos > 0 || t.notes > 0));
+    }
+
+    return [];
 }
 
 export async function fetchChapterContents(batchId = CONFIG.defaultBatchId, subjectSlug = CONFIG.defaultSubjectSlug, topicSlug: string) {
@@ -281,14 +295,16 @@ export async function fetchChapterContents(batchId = CONFIG.defaultBatchId, subj
         console.warn(`Upstream contents fetch failed for ${topicSlug}, checking fallback:`, err);
     }
 
-    // High-fidelity fallback for chapter contents
-    const fb = (curriculumFallback.contentsMap as any)?.[topicSlug];
-    if (fb) {
-        return {
-            videos: fb.videos || [],
-            notes: fb.notes || [],
-            exercises: fb.exercises || []
-        };
+    // High-fidelity fallback for chapter contents (Only for Shodh Foundation)
+    if (batchId === '69c13cdeb958f08c1d1dad1e') {
+        const fb = (curriculumFallback.contentsMap as any)?.[topicSlug];
+        if (fb) {
+            return {
+                videos: fb.videos || [],
+                notes: fb.notes || [],
+                exercises: fb.exercises || []
+            };
+        }
     }
 
     return { videos: [], notes: [], exercises: [] };
