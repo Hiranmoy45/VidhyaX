@@ -168,11 +168,16 @@ export async function fetchTopics(batchId = CONFIG.defaultBatchId, subjectSlug =
 
         if (res.ok) {
             const data = await res.json();
-            const topics = (data.data || []).filter((t: { videos: number; notes: number }) => (t.videos > 0 || t.notes > 0));
-            if (topics.length > 0) return topics;
+            const list = data.data || [];
+            const topics = list.filter((t: any) => (t.videos > 0 || t.notes > 0));
+            return topics.length > 0 ? topics : list;
+        } else {
+            const text = await res.text();
+            throw new Error(`Upstream topics HTTP ${res.status}: ${text.slice(0, 80)}`);
         }
-    } catch (err) {
-        console.warn('Upstream topics fetch failed:', err);
+    } catch (err: any) {
+        console.warn('Upstream topics fetch failed:', err?.message || err);
+        throw err;
     }
 
     // Only fallback if the requested batch is Shodh Foundation

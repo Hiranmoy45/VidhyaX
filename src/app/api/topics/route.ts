@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
         const batchId = extractBatchId(rawBatch);
         const subjectSlug = searchParams.get('subjectSlug') || CONFIG.defaultSubjectSlug;
         const topics = await fetchTopics(batchId, subjectSlug);
-        return NextResponse.json({ success: true, topics });
+        return NextResponse.json({ success: true, count: topics.length, topics });
     } catch (err: any) {
         return NextResponse.json({ success: false, error: err.message }, { status: 500 });
     }
