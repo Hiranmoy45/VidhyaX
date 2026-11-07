@@ -520,44 +520,63 @@ export default function Home() {
                     : q
             ));
         } else if (event.type === 'start') {
-            setCurrentDownloadIndex(event.itemIndex);
-            setDownloadQueue(prev => prev.map((q, idx) =>
-                idx === event.itemIndex ? { ...q, status: 'downloading', percent: 0, message: 'Starting...' } : q
-            ));
+            if (typeof event.itemIndex === 'number') {
+                setCurrentDownloadIndex(event.itemIndex);
+                setDownloadQueue(prev => prev.map((q, idx) =>
+                    idx === event.itemIndex ? { ...q, status: 'downloading', percent: 0, message: event.message || 'Starting...' } : q
+                ));
+            }
+        } else if (event.type === 'item_start') {
+            if (typeof event.itemIndex === 'number') {
+                setCurrentDownloadIndex(event.itemIndex);
+                setDownloadQueue(prev => prev.map((q, idx) =>
+                    idx === event.itemIndex
+                        ? { ...q, status: 'resolving', percent: 0, message: event.message || 'Resolving stream & assets...' }
+                        : q
+                ));
+            }
         } else if (event.type === 'item_progress') {
-            setDownloadQueue(prev => prev.map((q, idx) =>
-                idx === event.itemIndex
-                    ? {
-                        ...q,
-                        percent: event.percent ?? q.percent,
-                        downloadedSegments: event.downloadedSegments,
-                        totalSegments: event.totalSegments,
-                        speed: event.speed,
-                        etaSeconds: event.etaSeconds,
-                        message: event.message
-                    }
-                    : q
-            ));
-        } else if (event.type === 'item_complete') {
-            setDownloadQueue(prev => prev.map((q, idx) =>
-                idx === event.itemIndex
-                    ? {
-                        ...q,
-                        status: event.skipped ? 'skipped' : 'done',
-                        percent: 100,
-                        sizeMb: event.sizeMb,
-                        finalPath: event.finalPath,
-                        message: event.message
-                    }
-                    : q
-            ));
+            if (typeof event.itemIndex === 'number') {
+                setCurrentDownloadIndex(event.itemIndex);
+                setDownloadQueue(prev => prev.map((q, idx) =>
+                    idx === event.itemIndex
+                        ? {
+                            ...q,
+                            status: (event.status || 'downloading') as any,
+                            percent: typeof event.percent === 'number' ? event.percent : q.percent,
+                            sizeMb: event.sizeMb || q.sizeMb,
+                            message: event.message || q.message
+                        }
+                        : q
+                ));
+            }
+        } else if (event.type === 'item_done' || event.type === 'item_complete') {
+            if (typeof event.itemIndex === 'number') {
+                setDownloadQueue(prev => prev.map((q, idx) =>
+                    idx === event.itemIndex
+                        ? {
+                            ...q,
+                            status: event.skipped ? 'skipped' : 'done',
+                            percent: 100,
+                            sizeMb: event.sizeMb || q.sizeMb,
+                            finalPath: event.finalPath,
+                            message: event.message || (event.skipped ? 'Already exists' : 'Saved successfully')
+                        }
+                        : q
+                ));
+                // Automatically advance to the next item in queue
+                setCurrentDownloadIndex(event.itemIndex + 1);
+            }
         } else if (event.type === 'item_error') {
-            setDownloadQueue(prev => prev.map((q, idx) =>
-                idx === event.itemIndex
-                    ? { ...q, status: 'error', error: event.error, message: event.message }
-                    : q
-            ));
-        } else if (event.type === 'complete') {
+            if (typeof event.itemIndex === 'number') {
+                setDownloadQueue(prev => prev.map((q, idx) =>
+                    idx === event.itemIndex
+                        ? { ...q, status: 'error', error: event.error, message: event.message || event.error }
+                        : q
+                ));
+                setCurrentDownloadIndex(event.itemIndex + 1);
+            }
+        } else if (event.type === 'complete' || event.type === 'job_complete') {
             setIsDownloading(false);
         }
     };

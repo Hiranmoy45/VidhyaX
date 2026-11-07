@@ -184,78 +184,127 @@ export const DownloadDrawer: React.FC<DownloadDrawerProps> = ({
                             </div>
                         )}
 
-                        {/* Queue Items List */}
-                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
-                            {queue.map((item, idx) => (
-                                <div
-                                    key={item.id || idx}
-                                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition ${
-                                        idx === currentItemIndex && isDownloading
-                                            ? 'bg-indigo-950/40 border-indigo-500/50'
-                                            : item.status === 'done' || item.status === 'skipped'
-                                            ? 'bg-slate-950/40 border-slate-800/60 text-slate-300'
-                                            : item.status === 'cancelled'
-                                            ? 'bg-amber-950/20 border-amber-900/50 text-amber-300'
-                                            : item.status === 'error'
-                                            ? 'bg-rose-950/20 border-rose-900/50 text-rose-300'
-                                            : 'bg-slate-950/20 border-slate-900 text-slate-500'
-                                    }`}
-                                >
-                                    <div className="flex items-center space-x-2.5 overflow-hidden">
-                                        <div className="shrink-0">
-                                            {item.status === 'done' ? (
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                                            ) : item.status === 'skipped' ? (
-                                                <Check className="w-3.5 h-3.5 text-slate-400" />
-                                            ) : item.status === 'cancelled' ? (
-                                                <StopCircle className="w-3.5 h-3.5 text-amber-400" />
-                                            ) : item.status === 'error' ? (
-                                                <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                                            ) : idx === currentItemIndex && isDownloading ? (
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                                            ) : (
-                                                <span className="w-3.5 h-3.5 rounded-full border border-slate-700 block" />
-                                            )}
-                                        </div>
-                                        <div className="overflow-hidden">
-                                            <p className="truncate font-medium text-slate-200 text-[11px]">
-                                                {item.title}
-                                            </p>
-                                            <span className="text-[10px] text-slate-500 font-mono">
-                                                {item.sizeMb ? `${item.sizeMb} MB` : item.type === 'video' ? '720p MP4' : 'PDF'}
-                                            </span>
-                                        </div>
-                                    </div>
+                        {/* Queue Items List (Per-Video Live Progress) */}
+                        <div className="max-h-60 overflow-y-auto space-y-2 pr-1 text-xs">
+                            {queue.map((item, idx) => {
+                                const isCurrent = idx === currentItemIndex && isDownloading;
+                                return (
+                                    <div
+                                        key={item.id || idx}
+                                        className={`p-3 rounded-2xl border transition-all ${
+                                            isCurrent
+                                                ? 'bg-indigo-950/50 border-indigo-500/60 shadow-lg shadow-indigo-950/40 ring-1 ring-indigo-500/40'
+                                                : item.status === 'done'
+                                                ? 'bg-emerald-950/20 border-emerald-900/50 text-slate-300'
+                                                : item.status === 'skipped'
+                                                ? 'bg-slate-950/40 border-slate-800/60 text-slate-300'
+                                                : item.status === 'cancelled'
+                                                ? 'bg-amber-950/20 border-amber-900/50 text-amber-300'
+                                                : item.status === 'error'
+                                                ? 'bg-rose-950/20 border-rose-900/50 text-rose-300'
+                                                : 'bg-slate-950/30 border-slate-800/40 text-slate-400'
+                                        }`}
+                                    >
+                                        {/* Row Top: Icon, Title, and Status Badge */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center space-x-2.5 overflow-hidden">
+                                                <div className="shrink-0">
+                                                    {item.status === 'done' ? (
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                                    ) : item.status === 'skipped' ? (
+                                                        <Check className="w-4 h-4 text-teal-300" />
+                                                    ) : item.status === 'cancelled' ? (
+                                                        <StopCircle className="w-4 h-4 text-amber-400" />
+                                                    ) : item.status === 'error' ? (
+                                                        <XCircle className="w-4 h-4 text-rose-400" />
+                                                    ) : isCurrent ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                                                    ) : (
+                                                        <span className="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[9px] font-mono text-slate-500">
+                                                            {idx + 1}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <p className="truncate font-semibold text-slate-200 text-xs flex items-center gap-1.5">
+                                                        {item.type === 'video' ? (
+                                                            <Video className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                                        ) : (
+                                                            <FileText className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                                        )}
+                                                        <span className="truncate">{item.title}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                    <div className="shrink-0 text-right">
-                                        {item.status === 'done' && (
-                                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                                                Saved
-                                            </span>
-                                        )}
-                                        {item.status === 'skipped' && (
-                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                                                Exists
-                                            </span>
-                                        )}
-                                        {item.status === 'cancelled' && (
-                                            <span className="text-[10px] font-bold text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800">
-                                                Cancelled
-                                            </span>
-                                        )}
-                                        {item.status === 'error' && (
-                                            <span className="text-[10px] font-bold text-rose-400 bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
-                                                Failed
-                                            </span>
-                                        )}
-                                        {idx === currentItemIndex && isDownloading && (
-                                            <span className="text-[10px] font-bold text-indigo-400 font-mono">
-                                                {item.percent}%
-                                            </span>
-                                        )}
+                                            {/* Status Badge & Percentage */}
+                                            <div className="shrink-0 flex items-center gap-2">
+                                                {item.status === 'done' && (
+                                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                                                        Saved {item.sizeMb ? `(${item.sizeMb} MB)` : ''}
+                                                    </span>
+                                                )}
+                                                {item.status === 'skipped' && (
+                                                    <span className="text-[10px] font-bold text-teal-400 bg-teal-950/80 px-2 py-0.5 rounded-full border border-teal-800/60">
+                                                        Exists {item.sizeMb ? `(${item.sizeMb} MB)` : ''}
+                                                    </span>
+                                                )}
+                                                {item.status === 'cancelled' && (
+                                                    <span className="text-[10px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-800/60">
+                                                        Cancelled
+                                                    </span>
+                                                )}
+                                                {item.status === 'error' && (
+                                                    <span className="text-[10px] font-bold text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-800/60">
+                                                        Failed
+                                                    </span>
+                                                )}
+                                                {(item.status === 'downloading' || item.status === 'remuxing' || item.status === 'resolving' || isCurrent) && (
+                                                    <span className="text-[11px] font-bold text-indigo-400 font-mono">
+                                                        {item.percent || 0}%
+                                                    </span>
+                                                )}
+                                                {item.status === 'idle' && !isCurrent && (
+                                                    <span className="text-[10px] font-medium text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                                                        In Queue
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Per-Video Dedicated Progress Bar */}
+                                        <div className="mt-2 space-y-1">
+                                            <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800/80">
+                                                <div
+                                                    className={`h-full transition-all duration-300 rounded-full ${
+                                                        item.status === 'done' || item.status === 'skipped'
+                                                            ? 'bg-emerald-500'
+                                                            : item.status === 'error'
+                                                            ? 'bg-rose-500'
+                                                            : item.status === 'cancelled'
+                                                            ? 'bg-amber-500'
+                                                            : isCurrent
+                                                            ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-400 animate-pulse'
+                                                            : 'bg-indigo-500'
+                                                    }`}
+                                                    style={{
+                                                        width: `${item.status === 'done' || item.status === 'skipped' ? 100 : item.percent || 0}%`
+                                                    }}
+                                                />
+                                            </div>
+                                            {/* Subtitle / Real-time Message */}
+                                            <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+                                                <span className="truncate pr-2">
+                                                    {item.message || (isCurrent ? 'Downloading segments...' : item.status === 'idle' ? 'Waiting in queue' : '')}
+                                                </span>
+                                                <span className="shrink-0 text-slate-500">
+                                                    {item.sizeMb ? `${item.sizeMb} MB` : item.type === 'video' ? '720p MP4' : 'PDF'}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* Footer message */}
