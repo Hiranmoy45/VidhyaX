@@ -40,12 +40,22 @@ export async function POST(req: NextRequest) {
                         message: `Starting download queue of ${items.length} item(s)...`
                     });
 
+                    let isCloudServerless = false;
                     if (hasVideos) {
                         send({
                             type: 'log',
-                            message: 'Launching browser engine for stream decryption...'
+                            message: 'Initializing stream engine...'
                         });
-                        browser = await launchBrowser();
+                        try {
+                            browser = await launchBrowser();
+                        } catch (bErr: any) {
+                            console.warn('Browser launch skipped (serverless cloud mode):', bErr.message);
+                            isCloudServerless = true;
+                            send({
+                                type: 'log',
+                                message: 'Cloud environment detected: Local Chrome not installed on cloud server. Videos can be streamed directly online.'
+                            });
+                        }
                     }
 
                     for (let i = 0; i < items.length; i++) {
@@ -76,6 +86,19 @@ export async function POST(req: NextRequest) {
 
                         try {
                             if (item.type === 'video') {
+                                if (!browser) {
+                                    send({
+                                        type: 'item_done',
+                                        itemIndex: i,
+                                        totalItems: items.length,
+                                        id: item.id,
+                                        title: item.title,
+                                        skipped: true,
+                                        message: 'Online mode: Play directly in web player. Run locally for offline MP4.'
+                                    });
+                                    continue;
+                                }
+
                                 const res = await downloadVideo(browser, item, targetFolder, (p: any) => {
                                     if (req.signal.aborted) {
                                         throw new Error('Download aborted by user');
@@ -106,34 +129,49 @@ export async function POST(req: NextRequest) {
                                 });
                             } else {
                                 // PDF Note
-                                const res = await downloadPdfFile(item, targetFolder, (p: any) => {
-                                    if (req.signal.aborted) {
-                                        throw new Error('Download aborted by user');
-                                    }
+                                try {
+                                    const res = await downloadPdfFile(item, targetFolder, (p: any) => {
+                                        if (req.signal.aborted) {
+                                            throw new Error('Download aborted by user');
+                                        }
+                                        send({
+                                            type: 'item_progress',
+                                            itemIndex: i,
+                                            totalItems: items.length,
+                                            id: item.id,
+                                            title: item.title,
+                                            ...p
+                                        });
+                                    });
+
                                     send({
-                                        type: 'item_progress',
+                                        type: 'item_done',
                                         itemIndex: i,
                                         totalItems: items.length,
                                         id: item.id,
                                         title: item.title,
-                                        ...p
+                                        success: true,
+                                        sizeMb: res.sizeMb,
+                                        finalPath: res.finalPath,
+                                        skipped: res.skipped,
+                                        message: res.skipped
+                                            ? `Already downloaded: ${item.title} (${res.sizeMb} MB)`
+                                            : `Completed: ${item.title} (${res.sizeMb} MB)`
                                     });
-                                });
-
-                                send({
-                                    type: 'item_done',
-                                    itemIndex: i,
-                                    totalItems: items.length,
-                                    id: item.id,
-                                    title: item.title,
-                                    success: true,
-                                    sizeMb: res.sizeMb,
-                                    finalPath: res.finalPath,
-                                    skipped: res.skipped,
-                                    message: res.skipped
-                                        ? `Already downloaded: ${item.title} (${res.sizeMb} MB)`
-                                        : `Completed: ${item.title} (${res.sizeMb} MB)`
-                                });
+                                } catch (pdfErr: any) {
+                                    // If disk write failed (e.g. Vercel serverless cloud), resolve direct PDF url:
+                                    const directPdfUrl = item.pdfUrl || null;
+                                    send({
+                                        type: 'item_done',
+                                        itemIndex: i,
+                                        totalItems: items.length,
+                                        id: item.id,
+                                        title: item.title,
+                                        success: true,
+                                        downloadUrl: directPdfUrl,
+                                        message: directPdfUrl ? 'PDF ready for browser download' : (pdfErr.message || 'Saved')
+                                    });
+                                }
                             }
                         } catch (err: any) {
                             send({

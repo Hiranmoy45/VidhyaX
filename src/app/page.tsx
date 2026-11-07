@@ -316,27 +316,21 @@ export default function Home() {
                 console.warn('Server API batch fetch failed, trying client direct fetch:', err);
             }
 
-            // 2. Client direct fetch fallback if server failed (Vercel IP block)
+            // 2. Client direct fetch fallback to official Penpencil API (CloudFront - fast, public CORS)
             if (!batchInfo || !batchInfo.subjects?.length) {
                 const bId = inputStr.trim().match(/([0-9a-fA-F]{24})/)?.[1] || inputStr.trim();
                 try {
-                    const directRes = await fetch(`https://proxy.streamvideo.co.in/fetch/api.penpencil.co/v3/batches/${bId}/details`, {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            'Referer': 'https://pwthor.live/',
-                            'Origin': 'https://pwthor.live'
-                        }
-                    });
+                    const directRes = await fetch(`https://api.penpencil.co/v3/batches/${bId}/details`);
                     if (directRes.ok) {
                         const directData = await directRes.json();
                         const b = directData.data || {};
-                        if (b.name) {
+                        if (b.name && Array.isArray(b.subjects) && b.subjects.length > 0) {
                             batchInfo = {
                                 batchId: b._id || bId,
                                 name: b.name,
                                 previewImage: b.previewImage?.baseUrl && b.previewImage?.key ? `${b.previewImage.baseUrl}${b.previewImage.key}` : '',
                                 testCats: b.testCats || [],
-                                subjects: (b.subjects || []).map((s: any) => ({
+                                subjects: b.subjects.map((s: any) => ({
                                     _id: s._id,
                                     slug: s.slug,
                                     subject: s.subject
@@ -635,11 +629,69 @@ export default function Home() {
         }));
     };
 
+    const isLocalEnvironment = () => {
+        if (typeof window === 'undefined') return false;
+        return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    };
+
+    const triggerBrowserDownload = (url: string, filename?: string) => {
+        if (!url) return;
+        const a = document.createElement('a');
+        a.href = url;
+        if (filename) a.download = filename;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            try { document.body.removeChild(a); } catch { }
+        }, 150);
+    };
+
     // Real-time Streaming Download with SSE
     const startStreamingDownload = async (itemsToDownload: any[]) => {
         if (!itemsToDownload.length) {
             alert('Please select at least 1 item to download.');
             return;
+        }
+
+        // Cloud Serverless Mode Check (e.g. Vercel / Cloudflare)
+        if (!isLocalEnvironment()) {
+            const notes = itemsToDownload.filter(it => it.type === 'note');
+            const videos = itemsToDownload.filter(it => it.type === 'video');
+
+            // 1. If there are PDF Notes, trigger direct browser download
+            if (notes.length > 0) {
+                notes.forEach((n, idx) => {
+                    const downloadUrl = n.pdfUrl;
+                    if (downloadUrl) {
+                        setTimeout(() => {
+                            triggerBrowserDownload(downloadUrl, `${n.cleanTitle || n.title}.pdf`);
+                        }, idx * 300);
+                    }
+                });
+            }
+
+            // 2. If there are videos in web mode:
+            if (videos.length > 0) {
+                if (videos.length === 1) {
+                    const vid = videos[0];
+                    const choice = confirm(
+                        `🎬 Online Video Streaming Ready!\n\n"${vid.title}" is ready to stream instantly in HD in-browser.\n\nOffline 720p MP4 remuxing with FFmpeg requires running VidhyaX locally on your PC (via START_PLATFORM.bat).\n\nClick OK to Watch this video online now!`
+                    );
+                    if (choice) {
+                        setActiveVideoLecture({ ...vid, chapterName: activeTopic?.name });
+                    }
+                } else {
+                    alert(
+                        `💡 Online Web Deployment Notice:\n\n• ${notes.length} Class Note(s) are downloading directly to your browser!\n\n• Video MP4 remuxing with FFmpeg requires local PC execution. Run START_PLATFORM.bat locally on your computer to download full offline video libraries to F:\\PW.\n\n• On this web version, you can click 'Watch' on any lecture to stream it online instantly in HD!`
+                    );
+                }
+                if (notes.length === 0) return;
+            } else if (notes.length > 0) {
+                alert(`📥 Downloading ${notes.length} PDF Document(s) directly to your browser's Downloads folder!`);
+                return;
+            }
         }
 
         const controller = new AbortController();
@@ -750,6 +802,9 @@ export default function Home() {
                 ));
             }
         } else if (event.type === 'item_done' || event.type === 'item_complete') {
+            if (event.downloadUrl) {
+                triggerBrowserDownload(event.downloadUrl);
+            }
             if (typeof event.itemIndex === 'number') {
                 setDownloadQueue(prev => prev.map((q, idx) =>
                     idx === event.itemIndex
